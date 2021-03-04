@@ -168,8 +168,8 @@ public class NewApplication extends Application {
         } else if (cardNo.isEmpty() || cardNo.equals("")) {
             this.vailadeError = "Card No Value Is empty Enter Card No Value";
             result = false;
-        } else if (!(cardNo.trim().length() == 32)) {
-            this.vailadeError = "Card No length is  32";
+        } else if (!(cardNo.trim().length() == 16)) {
+            this.vailadeError = "Card No length is  16";
             result = false;
         } else if (!cardNo.matches(numRegX)) {
             this.vailadeError = "CArd No is Not in Correct Format ";
