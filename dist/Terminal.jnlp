@@ -8,11 +8,12 @@
   </information>
   <resources>
     <j2se version="1.6+" href="http://java.sun.com/products/autodl/j2se"/>
-    <jar href="Terminal.jar" size="2225" download="eager" />
+    <jar href="Terminal.jar" size="17851" download="eager" />
+    <jar href="lib\bcprov-jdk16-146.jar" size="1876535" download="eager" />
   </resources>
   <applet-desc  width="800" height="600" main-class="com.javafx.main.NoJavaFXFallback"  name="Terminal" >
     <param name="requiredFXVersion" value="8.0+"/>
   </applet-desc>
-  <jfx:javafx-desc  width="800" height="600" main-class="terminal.Terminal"  name="Terminal" />
+  <jfx:javafx-desc  width="800" height="600" main-class="terminal.NewApplication"  name="Terminal" />
   <update check="always"/>
 </jnlp>

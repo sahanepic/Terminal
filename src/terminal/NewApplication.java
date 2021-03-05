@@ -5,6 +5,7 @@
  */
 package terminal;
 
+import javafx.scene.paint.Color;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
@@ -18,6 +19,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.GridPane;
+import javafx.scene.text.Font;
 
 import javafx.stage.Stage;
 
@@ -44,9 +46,12 @@ public class NewApplication extends Application {
 
     Label lbCleanPinBlock = new Label("Clean Pin Block");
     Label lbEncryptedPinBlock = new Label("Encrypted Pin Block");
+    Label lbFinalCleanPinBlock = new Label("Decrypted Pin Block");
 
     Label lbValCleanPinBlock = new Label("");
+
     Label lbValEncryptedPinBlock = new Label("");
+    Label lbValFinalCleanPinBlock = new Label("");
 
     PasswordField fldPin = new PasswordField();
     TextField fldCard_no = new TextField();
@@ -60,6 +65,15 @@ public class NewApplication extends Application {
     Button btnback = new Button("Back");
 
     public NewApplication() {
+        setVAlues();
+        Font font = new Font("Arial", 20);
+        lbValCleanPinBlock.setFont(font);
+        lbValCleanPinBlock.setTextFill(Color.web("#0076a3"));
+        lbValEncryptedPinBlock.setFont(font);
+        lbValEncryptedPinBlock.setTextFill(Color.web("#0076a3"));
+        lbValFinalCleanPinBlock.setFont(font);
+        lbValFinalCleanPinBlock.setTextFill(Color.web("#0076a3"));
+
     }
 
     public static void main(String[] args) {
@@ -101,13 +115,16 @@ public class NewApplication extends Application {
         window.setScene(scene1);
         window.show();
 
-        scene2 = new Scene(root2, 400, 200);
+        scene2 = new Scene(root2, 400, 250);
 
         root2.addRow(0, lbCleanPinBlock, new Label());
         root2.addRow(1, new Label(), lbValCleanPinBlock);
         root2.addRow(2, lbEncryptedPinBlock, new Label());
         root2.addRow(3, new Label(), lbValEncryptedPinBlock);
-        root2.addRow(4, btnback);
+        root2.addRow(4, lbFinalCleanPinBlock, new Label());
+        root2.addRow(5, new Label(), lbValFinalCleanPinBlock);
+        root2.addRow(6, new Label());
+        root2.addRow(7, btnback);
 
         btnProcess.setOnAction(new EventHandler<ActionEvent>() {
             Alert a = new Alert(Alert.AlertType.WARNING);
@@ -115,9 +132,14 @@ public class NewApplication extends Application {
             @Override
             public void handle(ActionEvent event) {
                 if (vaildateInuts()) {
-                    displayEntered();
-                    lbValCleanPinBlock.setText("12341234123412341234123412341234");
-                    lbValEncryptedPinBlock.setText("12341234123412341234123412341234");
+                    // displayEntered();
+                    PinBlockClass pp = returnPinBlockClass();
+                    PinProcess pinp = new PinProcess(pp);
+                    pinp.executeProcess();
+
+                    lbValCleanPinBlock.setText(pp.getClear_pin_block());
+                    lbValEncryptedPinBlock.setText(pp.getEncrypted_pin_block());
+                    lbValFinalCleanPinBlock.setText(pp.getFinal_clean_pin_Block());
                     window.setScene(scene2);
                 } else {
 
@@ -224,6 +246,18 @@ public class NewApplication extends Application {
         fldTmkc3.setText("");
     }
 
+    public PinBlockClass returnPinBlockClass() {
+        String pin = fldPin.getText();
+        String cardNo = fldCard_no.getText();
+        String tk = fldTk.getText();
+        String tmkc1 = fldTmkc1.getText();
+        String tmkc2 = fldTmkc2.getText();
+        String tmkc3 = fldTmkc3.getText();
+        PinBlockClass pp = new PinBlockClass(pin, cardNo, tmkc3, tmkc1, tmkc2, tmkc3);
+
+        return pp;
+    }
+
     public void displayEntered() {
         String pin = fldPin.getText();
         String cardNo = fldCard_no.getText();
@@ -245,6 +279,15 @@ public class NewApplication extends Application {
 
     public void setVailadeError(String vailadeError) {
         this.vailadeError = vailadeError;
+    }
+
+    private void setVAlues() {
+        fldPin.setText("1234");
+        fldCard_no.setText("1234123412341234");
+        fldTk.setText("CE93C61D8D78E6FACE93C61D8D78E6FA");
+        fldTmkc1.setText("12341234123412341234123412341234");
+        fldTmkc2.setText("12341234123412341234123412341234");
+        fldTmkc3.setText("12341234123412341234123412341234");
     }
 
 }

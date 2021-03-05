@@ -5,8 +5,15 @@
  */
 package terminal;
 
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
 /**
@@ -17,6 +24,14 @@ public class PinProcess {
 
     public static int PINLENTH;
     private PinBlockClass pinBlockClass;
+    private static final String ALGORITHM = "TripleDES";
+    private static final String MODE = "ECB";
+    private static final String PADDING = "NoPadding";
+
+    /**
+     * algorithm/mode/padding
+     */
+    private static final String TRANSFORMATION = ALGORITHM + "/" + MODE + "/" + PADDING;
 
     public PinBlockClass getPinBlockClass() {
         return pinBlockClass;
@@ -26,72 +41,141 @@ public class PinProcess {
         this.pinBlockClass = pinBlockClass;
     }
 
-    public PinProcess() {
-        pinBlockClass = new PinBlockClass("123456",
-                "1234123412341234",
-                "12341234123412341234123412341234",
-                "12341234123412341234123412341234",
-                "12341234123412341234123412341234",
-                "12341234123412341234123412341234");
+//    public PinProcess() {
+//        pinBlockClass = new PinBlockClass("1234",
+//                "1234123412341234",
+//                "CE93C61D8D78E6FACE93C61D8D78E6FA",
+//                "12341234123412341234123412341234",
+//                "12341234123412341234123412341234",
+//                "12341234123412341234123412341234");
+//        PINLENTH = pinBlockClass.getPin().length();
+//        //pinBlockClass.setDec_term_work("12341234123412341234123412341234");
+//    }
+    public PinProcess(PinBlockClass pp) {
+        this.pinBlockClass = pp;
         PINLENTH = pinBlockClass.getPin().length();
-
     }
 
-    public static void main(String[] args) {
-        PinProcess pinProcess = new PinProcess();
-        System.out.println(pinProcess.getPinBlockClass().toString());
-        pinProcess.createClearPinBlock();
-
-        byte[] bb=null;
-        try {
-             bb = xorBytes(h2b("12345678"), h2b("00000000"));
-        } catch (Exception ex) {
-             ex.getMessage();
-        }
-        
-        
-        System.out.println("The Byte Knolwdge");
-        System.out.println(" To Byte Array");
-        System.out.println(toByteArray("12345678"));
-        System.out.println(toByteArray("12345678"));
-        
-        System.out.println(" To h2b");
-        System.out.println(h2b("12345678")==h2b("12345678"));
-        System.out.println(h2b("12345678"));
-        System.out.println(" The xor After " + bb);
-        
-        System.out.println( "Get Bytes");
-        String num = "12345678";
-        byte[] bbb,ccc ;
-         System.out.println( bbb=toByteArray(num) );
-        System.out.println(ccc=toByteArray(num));
-        
-        System.out.println( ccc.equals(bbb));
-        
-         System.out.println(toHexString(bbb ) );
-        System.out.println(toHexString(ccc));
-        System.out.println(toHexString(bb));
-        
+//    public static void main(String[] args) {
+//        PinProcess pinProcess = new PinProcess();
+//        System.out.println(pinProcess.getPinBlockClass().toString());
+//        pinProcess.executeProcess();
+//
+//    }
+    public void executeProcess() {
+        pinBlockCreation();
+        terminalMasterKeyCreation();
+        decryptTerminalWorkinKey();
+        encryptCleanPinBlock();
+        decryptEncryptedCleanBlock();
+        dispayFinalOutputs();
     }
 
-    public void createClearPinBlock() {
-
+    public void pinBlockCreation() {
         String pad_card = pinBlockClass.getCard_no().substring(3, pinBlockClass.getCard_no().length() - 1);
         pad_card = "0000" + pad_card;
         pinBlockClass.setPaddin_cord_no(pad_card);
+
         String fs = "FFFFFFFFFFFFFFFF";
         String pad_pin = "0" + PINLENTH + pinBlockClass.getPin() + fs.substring(2 + PINLENTH, fs.length());
         pinBlockClass.setPadding_pin(pad_pin);
 
-        
-        
-        
-        
-        System.out.println("Padded pin     " + pinBlockClass.getPadding_pin());
-         
-        System.out.println("Padded pin     " + pinBlockClass.getPadding_pin());
-        System.out.println("Padded Card No " + pinBlockClass.getPaddin_cord_no());
+        try {
+            String clear_pin_block = toHexString(xorBytes(toByteArray(pinBlockClass.getPadding_pin()), toByteArray(pinBlockClass.getPaddin_cord_no())));
+            pinBlockClass.setClear_pin_block(clear_pin_block);
+        } catch (Exception ex) {
+            ex.getMessage();
+        }
+    }
 
+    public void terminalMasterKeyCreation() {
+        try {
+            byte[] xortwokey = (xorBytes(toByteArray(pinBlockClass.getTerm_master_c1()), toByteArray(pinBlockClass.getTerm_master_c2())));
+            String xorthreekey = toHexString(xorBytes(xortwokey, toByteArray(pinBlockClass.getTerm_master_c2())));
+            pinBlockClass.setTerm_master_key(xorthreekey);
+
+        } catch (Exception ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        }
+
+    }
+
+    public void decryptTerminalWorkinKey() {
+        byte[] temp_master = toByteArray(pinBlockClass.getTerm_master_key());
+        byte[] ter_master_key = new byte[24];
+        System.arraycopy(temp_master, 0, ter_master_key, 0, 16);
+        System.arraycopy(temp_master, 0, ter_master_key, 16, 8);
+
+        Cipher mCipher;
+
+        try {
+            mCipher = Cipher.getInstance(TRANSFORMATION);
+            mCipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(ter_master_key, ALGORITHM));
+            byte[] ciper_byte = mCipher.doFinal(toByteArray(pinBlockClass.getTerm_work()));
+            pinBlockClass.setDec_term_work(toHexString(ciper_byte));
+        } catch (Exception e) {
+        }
+    }
+
+    public void encryptCleanPinBlock() {
+        byte[] temp = toByteArray(pinBlockClass.getDec_term_work());
+        byte[] ter_key = new byte[24];
+        System.arraycopy(temp, 0, ter_key, 0, 16);
+        System.arraycopy(temp, 0, ter_key, 16, 8);
+
+        Cipher cipher;
+        try {
+            cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(ter_key, ALGORITHM));
+            byte[] ciper_byte = cipher.doFinal(toByteArray(pinBlockClass.getClear_pin_block()));
+            pinBlockClass.setEncrypted_pin_block(toHexString(ciper_byte));
+        } catch (NoSuchAlgorithmException ex) {
+            ex.getMessage();
+        } catch (NoSuchPaddingException ex) {
+            ex.getMessage();
+        } catch (InvalidKeyException ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalBlockSizeException ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (BadPaddingException ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void decryptEncryptedCleanBlock() {
+        byte[] temp_clen = toByteArray(pinBlockClass.getDec_term_work());
+        byte[] ter_key_clean = new byte[24];
+        System.arraycopy(temp_clen, 0, ter_key_clean, 0, 16);
+        System.arraycopy(temp_clen, 0, ter_key_clean, 16, 8);
+
+        Cipher cipher;
+        try {
+            cipher = Cipher.getInstance(TRANSFORMATION);
+            cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(ter_key_clean, ALGORITHM));
+            byte[] ciper_byte = cipher.doFinal(toByteArray(pinBlockClass.getEncrypted_pin_block()));
+//            System.out.println("The Final Clean text :                  " + toHexString(ciper_byte));
+            pinBlockClass.setFinal_clean_pin_Block(toHexString(ciper_byte));
+        } catch (NoSuchAlgorithmException ex) {
+            ex.getMessage();
+        } catch (NoSuchPaddingException ex) {
+            ex.getMessage();
+        } catch (InvalidKeyException ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (IllegalBlockSizeException ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (BadPaddingException ex) {
+            Logger.getLogger(PinProcess.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void dispayFinalOutputs() {
+        System.out.println("Padded pin                              " + pinBlockClass.getPadding_pin());
+        System.out.println("Padded Card No                          " + pinBlockClass.getPaddin_cord_no());
+        System.out.println("The Clear Pin Block                     " + pinBlockClass.getClear_pin_block());
+        System.out.println("The Therminal master Key                " + pinBlockClass.getTerm_master_key());
+        System.out.println("The  Decrypted Therminal working Key    " + pinBlockClass.getDec_term_work());
+        System.out.println("The Encrypted Pin Block                 " + pinBlockClass.getEncrypted_pin_block());
+        System.out.println("The Final Clean text :                  " + pinBlockClass.getFinal_clean_pin_Block());
     }
 
     public static byte[] toByteArray(String s) {
@@ -119,8 +203,7 @@ public class PinProcess {
         }
         return bytes;
     }
-    
-    
+
     public static String b2h(byte[] bytes) {
         char[] hex = new char[bytes.length * 2];
         for (int idx = 0; idx < bytes.length; ++idx) {
@@ -131,8 +214,8 @@ public class PinProcess {
         }
         return new String(hex);
     }
-    
-     public static byte[] xorBytes(byte[] a, byte[] b) throws Exception {
+
+    public static byte[] xorBytes(byte[] a, byte[] b) throws Exception {
         if (a.length != b.length) {
             throw new Exception();
         }
